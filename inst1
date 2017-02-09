@@ -1,0 +1,63 @@
+#!/usr/bin/env python
+# -*- coding: utf8 -*-
+import json, urllib, urllib2, random, os.path
+import codecs
+import time
+from urllib import urlencode
+
+DIR = os.path.abspath(os.curdir) + '/' #текущая директория куда будет писаться файл с
+                                       #результатами
+tag = 'shared_data' #здесь задаем переменную с нужным нам хештегом
+
+#выполнение запроса к сайту и получение данных 
+def get(url, timeout=10):
+        try:
+            return urllib2.urlopen(url, timeout=timeout).read()
+        except:
+            return 0
+
+def get_max_id(jsonres):
+    try:
+        jres = jsonres['tag']['media']['page_info']['end_cursor']
+        return jres
+    except:
+        return 0
+
+def have_next_page(jsonres):
+    try:
+        jres = jsonres['tag']['media']['page_info']['has_next_page']
+        if  jres == True:
+            return 1
+        else:
+            return 0
+    except:
+        return 0
+
+def get_media_info(noderow):
+    try:
+        return [(x['code'], x['owner'], x['date'], x['caption']) for x in noderow]
+    except:
+        return 0
+
+def main(tag):
+    f = codecs.open('instagram_by_' + tag + '_data.txt', 'w', encoding='utf-8')     
+    main_url = 'https://www.instagram.com/explore/tags/' + tag + '/?__a=1'
+    page = 1
+    res = json.loads(get(main_url)) 
+    max_id = None
+    while page == 1:
+        for i in get_media_info(res['tag']['media']['nodes']):
+             caption = i[3]
+             mycaption2 = caption.replace('\n','')
+             f.write(str(i[0]) + ',' + str(i[1])+ ','+ str(i[2])+ ','+ mycaption2+'\n')
+        page = have_next_page(res)
+        time.sleep(3)
+        if page == 1:
+            print 'next page'
+            max_id = get_max_id(res)
+            main_url = 'https://www.instagram.com/explore/tags/' + tag + '/?__a=1' + '&max_id=' + str(max_id)
+            res = json.loads(get(main_url))
+    print 'DONE!'
+
+if __name__ == '__main__':
+    main(tag)
